@@ -1,0 +1,19 @@
+TERMIN TRACKER 0.19.1
+=====================
+
+1. Termin Tracker.app dosyasını Applications kısayoluna sürükleyin.
+2. Disk imajını çıkarın ve Applications içinden Termin Tracker'ı açın.
+3. Start Audio ile ses çıkışını ve isteğe bağlı mikrofon iznini ayarlayın.
+4. Sample Set klasörü isteğe bağlıdır. İsterseniz kendi müzik klasörünüze
+   kopyalayın. Sample Loader (8) ile dosyaları seçin.
+
+Sistem: macOS 15.0 veya sonraki sürümler, Apple Silicon ve Intel.
+Eski .trackermac proje dosyaları uyumludur.
+
+Bu uygulama yerel (ad-hoc) imzalıdır. Apple Developer ID imzası ve
+notarization içermez. macOS veya kurumunuzun güvenlik politikası
+uygulamayı engelleyebilir. Kurumsal bilgisayarda IT onayı alın.
+
+Time Stretch isteğe bağlı Rubber Band R3 aracını kullanır. Kurulu
+değilse diğer özellikler çalışır, sadece Time Stretch kullanılamaz.
+Aracı kurum politikanıza uygun şekilde kurmanız gerekir.

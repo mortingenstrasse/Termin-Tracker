@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Termin Tracker</string>
+	<key>CFBundleExecutable</key>
+	<string>TerminTracker</string>
+	<key>CFBundleIconFile</key>
+	<string>Termin.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.trackermac.prototype</string>
+	<key>CFBundleName</key>
+	<string>Termin Tracker</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.19.1</string>
+	<key>CFBundleVersion</key>
+	<string>191</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Termin Tracker requests microphone access during Audio Setup so you can record samples later without interruption. Recording starts only when you press Record.</string>
+</dict>
+</plist>

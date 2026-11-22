@@ -1,0 +1,52 @@
+import AppKit
+
+let flatEQ=[0,0,0,0]
+func validEQ(_ v:[Int])->Bool{v.count==4&&v.allSatisfy{(-18...18).contains($0)}}
+func validOptionalEQ(_ v:[Int]?)->Bool{v.map(validEQ) ?? true}
+extension Cell {
+    var combinedEQ:[Int]{let a=fx==8 ? eq1 ?? flatEQ:flatEQ,b=fx2==8 ? eq2 ?? flatEQ:flatEQ;return zip(a,b).map{max(-18,min(18,$0.0+$0.1))}}
+}
+extension Tracker {
+    func channelEQValues(_ p:Int,_ t:Int)->[Int]{t==26 ? eqValues:project.patterns[p]?.trackEQ?[t] ?? flatEQ}
+    func publishTrackEQ(_ p:Int,_ t:Int){let v=channelEQValues(p,t);tm_track_eq(Int32(p),Int32(t),Int32(v[0]),Int32(v[1]),Int32(v[2]),Int32(v[3]))}
+    var scopedEQTitle:String{eqScope==1 ? (eqTrack==26 ? "MASTER / EQ":"P\(eqPattern) / TRACK \(eqTrack+1) / EQ"):"P\(eqPattern) / TRACK \(eqTrack+1) / STEP \(eqRow+1) / FX\(eqSlot-4) EQ"}
+    func openChannelEQ(){eqScope=1;eqPattern=sendPattern;eqTrack=sendStrip;eqDraft=channelEQValues(eqPattern,eqTrack);eqFocus=0;modal=11;needsDisplay=true}
+    func openStepEQ(){eqScope=2;eqPattern=project.selected;eqTrack=track;eqRow=row;eqSlot=modalField;let c=cell;eqDraft=(eqSlot==5 && c.fx==8 ? c.eq1: eqSlot==6 && c.fx2==8 ? c.eq2:nil) ?? flatEQ;eqFocus=0;modal=11;needsDisplay=true}
+    func applyScopedEQ(){checkpoint();if eqScope==1{if eqTrack==26{project.eq=eqDraft;publishEQ()}else{var p=project.patterns[eqPattern] ?? Pattern(),v=p.trackEQ ?? Array(repeating:flatEQ,count:24);v[eqTrack]=eqDraft;p.trackEQ=v;project.patterns[eqPattern]=p;publishTrackEQ(eqPattern,eqTrack)}}else{var p=project.patterns[eqPattern] ?? Pattern(),c=p.cells[eqTrack][eqRow];if eqSlot==5{c.fx=8;c.fxValue=nil;c.eq1=eqDraft}else{c.fx2=8;c.fx2Value=nil;c.eq2=eqDraft};p.cells[eqTrack][eqRow]=c;project.patterns[eqPattern]=p;push(eqPattern,eqTrack,eqRow,c)};modal=eqScope==1 ? 10:0;needsDisplay=true}
+    func scopedEQKey(_ e:NSEvent){let k=e.keyCode,c=e.charactersIgnoringModifiers?.lowercased() ?? "",d=e.modifierFlags.contains(.shift) ? 3:1;switch k{case 36,76:applyScopedEQ();case 53:modal=eqScope==1 ? 10:2;case 123:eqFocus=max(0,eqFocus-1);case 124:eqFocus=min(3,eqFocus+1);case 51:eqDraft[eqFocus]=0;default:if k==126||c=="e"{eqDraft[eqFocus]=min(18,eqDraft[eqFocus]+d)}else if k==125||c=="q"{eqDraft[eqFocus]=max(-18,eqDraft[eqFocus]-d)}else if k==96{eqDraft=flatEQ}};needsDisplay=true}
+    func scopedEQMouse(_ p:NSPoint){let w=bounds.width-112;eqFocus=max(0,min(3,Int((p.x-56)/(w/4))));needsDisplay=true}
+    func drawScopedEQ(){rect(0,44,bounds.width,bounds.height-44,trackerBackground);drawEQ();centered("ENTER Apply    ESC Cancel    F5 Reset All",0,footerY+20,bounds.width,12,gray(0.8))}
+    func sendMouse(_ p:NSPoint){let x=(bounds.width-470)/2,y=(bounds.height-310)/2;guard p.x>=x&&p.x<x+470&&p.y>=y+52&&p.y<y+240 else{return};sendFocus=min(3,Int((p.y-y-52)/48));if sendFocus==3{openChannelEQ()}else{needsDisplay=true}}
+}
+
+func scopedEQSelfTest(){let t=Tracker(frame:NSRect(x:0,y:0,width:1440,height:900));t.selectPage(3);t.selectMixer(0);t.openSends();t.sendFocus=3;t.openChannelEQ();t.eqDraft=[2,-3,4,5];t.applyScopedEQ();precondition(t.channelEQValues(0,0)==[2,-3,4,5]&&t.channelEQValues(0,1)==flatEQ&&t.eqValues==flatEQ);t.modal=0;t.selectPage(0);t.rec=true;t.assignInstrument(3,wholeTrack:false);t.row=0;t.field=5;t.beginEdit();t.editFX=8;t.commit();precondition(t.modal==11);t.eqDraft=[-6,2,0,3];t.applyScopedEQ();precondition(t.cell.fx==8&&t.cell.eq1==[-6,2,0,3]&&t.eqValues==flatEQ);let data=try! JSONEncoder().encode(t.project);let p=try! JSONDecoder().decode(Project.self,from:data);precondition(t.valid(p)&&p.patterns[0]?.cells[0][0].eq1==[-6,2,0,3]);print("Scope-specific channel and step EQ, isolation and save roundtrip passed")}
+
+func newFXWorkflowTest(){
+    let t=Tracker(frame:NSRect(x:0,y:0,width:1440,height:900))
+    t.selectPage(11);t.soft(6,shift:false);precondition(t.fxFocus==12)
+    t.adjustEQ(6);precondition(t.eqValues[0]==6)
+    t.selectPage(3);t.selectMixer(0);t.soft(2,shift:false);precondition(t.modal==10)
+    t.adjustSend(35);precondition(t.sends(0,pattern:t.mixerPatternID)[0]==35)
+    t.modal=0;t.selectMixer(26);t.soft(2,shift:false);t.adjustSend(25);precondition(t.sends(26,pattern:0)[0]==25)
+    t.modal=0;t.selectPage(0);t.rec=true;t.assignInstrument(3,wholeTrack:false);t.row=0;t.insertNotes([60]);t.row=0;t.openDuration();precondition(t.modal==9)
+    t.durationEdit=12;let event=NSEvent.keyEvent(with:.keyDown,location:.zero,modifierFlags:[],timestamp:0,windowNumber:0,context:nil,characters:"\r",charactersIgnoringModifiers:"\r",isARepeat:false,keyCode:36)!;t.durationKey(event);precondition(t.pattern.heldCell(track:0,row:2)?.notes==[60]);precondition(t.pattern.heldCell(track:0,row:3)==nil)
+    t.fill();precondition(t.fillSettingsRows().contains{$0.0=="Sustain"})
+    print("0.13.1 EQ, mixer sends, duration continuation and Fill sustain workflow passed")
+}
+
+func validSend(_ values:[Int])->Bool{values.count==3&&values.allSatisfy{(0...100).contains($0)}}
+extension Tracker {
+    var eqValues:[Int]{project.eq ?? [0,0,0,0]}
+    func publishEQ(){let v=eqValues;tm_set_eq(Int32(v[0]),Int32(v[1]),Int32(v[2]),Int32(v[3]))}
+    func adjustEQ(_ d:Int){var v=eqValues;let i=max(0,min(3,fxFocus-12));v[i]=max(-18,min(18,v[i]+d));checkpoint();project.eq=v;publishEQ();needsDisplay=true}
+    func resetEQ(){checkpoint();project.eq=[0,0,0,0];publishEQ();needsDisplay=true}
+    func eqKey(_ event:NSEvent)->Bool{let k=event.keyCode,c=event.charactersIgnoringModifiers?.lowercased() ?? "",d=event.modifierFlags.contains(.shift) ? 3:1;if c=="a"||k==48{fxFocus=0;return true};if k==53{selectPage(3);return true};if k==123{fxFocus=max(12,fxFocus-1)}else if k==124{fxFocus=min(15,fxFocus+1)}else if k==126||c=="e"{adjustEQ(d)}else if k==125||c=="q"{adjustEQ(-d)}else if k==51{adjustEQ(-eqValues[fxFocus-12])}else{return false};needsDisplay=true;return true}
+    func eqResponse(_ frequency:Double)->Double{let sr=Double(max(8000,tm_dsp_rate())),frequencies=[100.0,500,2500,8000],values=modal==11 ? eqDraft:eqValues,omega=2*Double.pi*frequency/sr;var db=0.0;for i in 0..<4{let A=pow(10,Double(values[i])/40),w=2*Double.pi*min(frequencies[i],sr*0.44)/sr,co=cos(w),si=sin(w),al=si/1.6,x=2*sqrt(A)*si/sqrt(2);var n:[Double],d:[Double];if i==0{n=[A*((A+1)-(A-1)*co+x),2*A*((A-1)-(A+1)*co),A*((A+1)-(A-1)*co-x)];d=[(A+1)+(A-1)*co+x,-2*((A-1)+(A+1)*co),(A+1)+(A-1)*co-x]}else if i==3{n=[A*((A+1)+(A-1)*co+x),-2*A*((A-1)+(A+1)*co),A*((A+1)+(A-1)*co-x)];d=[(A+1)-(A-1)*co+x,2*((A-1)-(A+1)*co),(A+1)-(A-1)*co-x]}else{n=[1+al*A,-2*co,1-al*A];d=[1+al/A,-2*co,1-al/A]};func magnitude(_ q:[Double])->Double{hypot(q[0]+q[1]*cos(omega)+q[2]*cos(2*omega),q[1]*sin(omega)+q[2]*sin(2*omega))};db+=20*log10(max(1e-8,magnitude(n))/max(1e-8,magnitude(d)))};return db}
+    func drawEQ(){let w=bounds.width,x:CGFloat=56,y:CGFloat=145,gw=w-112,gh=max(120,footerY-y-128);txt(modal==11 ? scopedEQTitle:"FX SETTINGS / MASTER EQ",55,65,14,teal,true);txt(modal==11 ? "← → Band    Q/E Gain    Delete Reset band    Enter Apply    Esc Cancel":"A / Tab Reverb & Delay    ← → Band    Q/E Gain    Delete Reset band",55,95,12,gray(0.8));rect(x,y,gw,gh,gray(0.09));for v in [-18,-12,-6,0,6,12,18]{let yy=y+gh*(1-CGFloat(v+18)/36);rect(x,yy,gw,1,v==0 ? gray(0.5):gray(0.24));txt("\(v)",x+4,yy+2,9,gray(0.65))};let path=NSBezierPath();for i in 0...300{let t=Double(i)/300,f=20*pow(1000,t),db=max(-18,min(18,eqResponse(f))),pt=NSPoint(x:x+CGFloat(t)*gw,y:y+gh*(1-CGFloat(db+18)/36));if i==0{path.move(to:pt)}else{path.line(to:pt)}};teal.setStroke();path.lineWidth=2;path.stroke();let labels=["BASS 100 Hz","MID A 500 Hz","MID B 2.5 kHz","HIGH 8 kHz"];for i in 0..<4{let bx=x+CGFloat(i)*gw/4,by=y+gh+28,bw=gw/4-8;rect(bx,by,bw,50,gray(0.23));if (modal==11 ? eqFocus:fxFocus-12)==i{border(bx,by,bw,50,teal)};centered(labels[i],bx,by+7,bw,12,gray(0.8));centered(String(format:"%+d dB",(modal==11 ? eqDraft:eqValues)[i]),bx,by+25,bw,13,teal,true)}}
+    func sends(_ id:Int,pattern:Int)->[Int]{if id==26{return project.masterSends ?? [0,0,0]};guard id<24 else{return [0,0,0]};return project.patterns[pattern]?.sends?[id] ?? [0,0,0]}
+    func publishSends(){for i in 0..<128{for t in 0..<24{let v=sends(t,pattern:i);tm_track_sends(Int32(i),Int32(t),Int32(v[0]),Int32(v[1]),Int32(v[2]));publishTrackEQ(i,t)}};let v=sends(26,pattern:0);tm_master_sends(Int32(v[0]),Int32(v[1]),Int32(v[2]))}
+    func openSends(){guard mixerFocus<24||mixerFocus==26 else{message="Select a track or Master Output";return};sendStrip=mixerFocus;sendPattern=mixerPatternID;sendFocus=0;modal=10;needsDisplay=true}
+    func adjustSend(_ d:Int){guard sendFocus<3 else{return};var v=sends(sendStrip,pattern:sendPattern);v[sendFocus]=max(0,min(100,v[sendFocus]+d));checkpoint();if sendStrip==26{project.masterSends=v;tm_master_sends(Int32(v[0]),Int32(v[1]),Int32(v[2]))}else{var p=project.patterns[sendPattern] ?? Pattern(),a=p.sends ?? Array(repeating:[0,0,0],count:24);a[sendStrip]=v;p.sends=a;project.patterns[sendPattern]=p;tm_track_sends(Int32(sendPattern),Int32(sendStrip),Int32(v[0]),Int32(v[1]),Int32(v[2]))};needsDisplay=true}
+    func sendKey(_ e:NSEvent){let k=e.keyCode,c=e.charactersIgnoringModifiers?.lowercased() ?? "",d=e.modifierFlags.contains(.shift) ? 10:1;switch k{case 53:modal=0;case 36,76:if sendFocus==3{openChannelEQ()}else{modal=0};case 125:sendFocus=min(3,sendFocus+1);case 126:sendFocus=max(0,sendFocus-1);case 123:adjustSend(-d);case 124:adjustSend(d);case 51:if sendFocus<3{adjustSend(-sends(sendStrip,pattern:sendPattern)[sendFocus])};default:if c=="q"{adjustSend(-d)}else if c=="e"{adjustSend(d)}};needsDisplay=true}
+    func drawSendEditor(){let w:CGFloat=470,h:CGFloat=310,x=(bounds.width-w)/2,y=(bounds.height-h)/2;rect(0,0,bounds.width,bounds.height,.black.withAlphaComponent(0.6));rect(x,y,w,h,trackerBackground);border(x,y,w,h,teal);txt(sendStrip==26 ? "MASTER / FX SENDS":"P\(sendPattern) / TRACK \(sendStrip+1) / FX SENDS",x+16,y+14,14,teal,true);let vals=sends(sendStrip,pattern:sendPattern);for i in 0..<3{let yy=y+52+CGFloat(i)*48;if sendFocus==i{rect(x+12,yy,w-24,43,gray(0.3))};txt(["REVERB","DELAY","SLICER"][i],x+25,yy+13,12,terminText,true);rect(x+160,yy+19,200,6,gray(0.36));rect(x+160,yy+19,CGFloat(vals[i])*2,6,purple);txt("\(vals[i])%",x+375,yy+11,12,teal,true)};let yy=y+196;if sendFocus==3{rect(x+12,yy,w-24,43,gray(0.3))};txt("EQ  /  4-BAND",x+25,yy+13,12,terminText,true);txt(channelEQValues(sendPattern,sendStrip).map{String(format:"%+d",$0)}.joined(separator:" / ")+" dB",x+160,yy+13,12,teal,true);centered("↑ ↓ effect   Q/E amount   Enter EQ / Esc close",x,y+h-28,w,11,gray(0.7))}
+}

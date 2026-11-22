@@ -1,0 +1,16 @@
+.DS_Store
+._*
+.capture-work/
+.tracker-build.*/
+build-linux/
+*.app/
+*.dmg
+*.wav
+*.aiff
+*.trackermac
+Sample Set/
+projects/
+*.log
+controls-v*.txt
+Pocket/port/terminpocket/terminpocket.aarch64
+Pocket/port/terminpocket/lib/*.so*
